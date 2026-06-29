@@ -1,0 +1,8 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 233dbdee61e318f93498e93a5eaf700a065d1f49318f47201a7c44e8a31d4ae0 # shrinks to mut orders = [Order { id: 1, side: Buy, price: Price(565), qty: Qty(1), timestamp: 1 }, Order { id: 1, side: Sell, price: Price(566), qty: Qty(1), timestamp: 1 }, Order { id: 1, side: Buy, price: Price(1), qty: Qty(1), timestamp: 1 }, Order { id: 1, side: Sell, price: Price(2), qty: Qty(1), timestamp: 1 }]
+cc f4d13f130c551afa67abda91be337309ae3bc6173d589a16c345dc7cf1162eac # shrinks to mut orders = [Order { id: 1, side: Sell, price: Price(70), qty: Qty(1), timestamp: 1 }, Order { id: 1, side: Buy, price: Price(1), qty: Qty(1), timestamp: 1 }, Order { id: 1, side: Buy, price: Price(70), qty: Qty(1), timestamp: 1 }]

@@ -1,0 +1,22 @@
+[package]
+name = "high-performance-matching-engine"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+description = "In-process order-book matching engine library showcasing systems-engineering skills"
+license = "MIT"
+repository = "https://github.com/mppin/high-performance-matching-engine"
+
+[dependencies]
+
+[dev-dependencies]
+proptest = "1"
+divan = "0.1"
+
+[[bench]]
+name = "matching_bench"
+harness = false
+
+[[example]]
+name = "partial_fill_demo"
+path = "examples/partial_fill_demo.rs"

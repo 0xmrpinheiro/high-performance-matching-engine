@@ -35,6 +35,19 @@ impl LimitLevel {
         self.orders.front()
     }
 
+    /// Fill up to `max_qty` from the oldest order without moving its remainder.
+    pub(crate) fn fill_front(&mut self, max_qty: u64) -> Option<(u64, Qty)> {
+        let order = self.orders.front_mut()?;
+        let maker_id = order.id;
+        let filled = max_qty.min(order.qty.inner());
+        order.qty = Qty::new(order.qty.inner() - filled);
+        if order.qty.inner() == 0 {
+            self.orders.pop_front();
+        }
+        self.total_qty = Qty::new(self.total_qty.inner() - filled);
+        Some((maker_id, Qty::new(filled)))
+    }
+
     pub fn is_empty(&self) -> bool {
         self.orders.is_empty()
     }

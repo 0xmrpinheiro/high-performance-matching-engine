@@ -32,9 +32,10 @@ mod tests {
     }
 
     #[test]
-    fn qty_fixed_point
-        let q = Qty::from_f64(3.14);
-        assert_eq!(q.to_f64(), 3.14);
+    fn qty_fixed_point_conversion() {
+        let q = Qty::from_f64(3.125);
+        assert_eq!(q.inner(), 312_500_000);
+        assert_eq!(q.to_f64(), 3.125);
     }
 
     #[test]

@@ -8,8 +8,8 @@ fn make_order(id: u64, side: Side, price: u64, qty: u64, timestamp: u64) -> Orde
     Order {
         id,
         side,
-        price: Price::new(price),
-        qty: Qty::new(qty),
+        price: Price::new(price * Price::SCALE),
+        qty: Qty::new(qty * Price::SCALE),
         timestamp,
     }
 }
@@ -17,40 +17,24 @@ fn make_order(id: u64, side: Side, price: u64, qty: u64, timestamp: u64) -> Orde
 fn main() {
     let mut book = OrderBook::new();
 
-    println!("=== Partial-Fill Demo ===\n");
+    book.submit(make_order(1, Side::Sell, 100, 100, 1));
+    book.submit(make_order(2, Side::Sell, 100, 80, 2));
+    println!("Resting asks at 100: #1 (100 units), then #2 (80 units)");
 
-    let maker = make_order(1, Side::Sell, 100, 100, 1);
-    println!("Submitted: Sell 100 @ 100 (maker)");
-    book.submit(maker);
-    println!("Book state: 1 ask level @ 100 (100 qty), 0 bid levels\n");
-
-    let taker = make_order(2, Side::Buy, 100, 50, 2);
-    println!("Submitted: Buy 50 @ 100 (taker)");
-    let result = book.submit(taker);
-    println!("Result:");
-    println!("  - {} trade(s)", result.trades.len());
-    for (i, trade) in result.trades.iter().enumerate() {
-        println!(
-            "    Trade {}: {} @ {} (maker={}, taker={})",
-            i + 1,
-            trade.qty.to_f64(),
-            trade.price.to_f64(),
-            trade.maker_id,
-            trade.taker_id
-        );
-    }
-    if let Some(resting) = result.resting {
-        println!(
-            "  - Resting: {:?} {} @ {} (id={})",
-            resting.side,
-            resting.qty.to_f64(),
-            resting.price.to_f64(),
-            resting.id
-        );
+    for (id, qty) in [(3, 40), (4, 75)] {
+        println!("Buy #{id}: {qty} @ 100");
+        let result = book.submit(make_order(id, Side::Buy, 100, qty, id));
+        for trade in result.trades {
+            println!(
+                "  matched {} @ {} with maker #{}",
+                trade.qty.to_f64(),
+                trade.price.to_f64(),
+                trade.maker_id
+            );
+        }
     }
     println!(
-        "Book state: {} ask level(s), {} bid level(s)\n",
-        book.ask_levels(),
-        book.bid_levels()
+        "Remaining book quantity: {}",
+        Qty::new(book.total_book_qty()).to_f64()
     );
 }

@@ -33,46 +33,40 @@ proptest! {
     }
 
     #[test]
-    fn prop_conservation_of_qty(mut orders in prop::collection::vec(make_order_strategy(), 1..50)) {
+    fn prop_conservation_of_qty(orders in prop::collection::vec(make_order_strategy(), 1..50)) {
         let mut book = OrderBook::new();
-        let input_total: u64 = orders.iter().map(|o| o.qty.inner()).sum();
+        let mut submitted = 0;
+        let mut executed = 0;
 
-        for order in orders.drain(..) {
-            book.submit(order);
-        }
-
-        assert!(book.total_book_qty() <= input_total);
-    }
-
-    #[test]
-    fn prop_no_negative_qty(mut orders in prop::collection::vec(make_order_strategy(), 1..50)) {
-        let mut book = OrderBook::new();
-        let input_total: u64 = orders.iter().map(|o| o.qty.inner()).sum();
-
-        for order in orders.drain(..) {
-            book.submit(order);
-        }
-
-        assert!(book.total_book_qty() <= input_total);
-    }
-
-    #[test]
-    fn prop_trade_prices_in_range(mut orders in prop::collection::vec(make_order_strategy(), 1..50)) {
-        let mut book = OrderBook::new();
-
-        for order in orders.drain(..) {
-            let best_bid_before = book.best_bid_price();
-            let best_ask_before = book.best_ask_price();
+        for order in orders {
+            submitted += order.qty.inner();
             let result = book.submit(order);
+            executed += result.trades.iter().map(|trade| trade.qty.inner()).sum::<u64>();
+            // Every trade consumes equal quantities from the maker and taker.
+            prop_assert_eq!(book.total_book_qty() + 2 * executed, submitted);
+        }
+    }
 
-            for trade in &result.trades {
-                if order.side == Side::Sell {
-                    if let Some(bp) = best_bid_before {
-                        assert!(trade.price.inner() <= bp, "sell trade price {} exceeds best bid {}", trade.price.inner(), bp);
-                    }
-                } else {
-                    if let Some(ap) = best_ask_before {
-                        assert!(trade.price.inner() >= ap, "buy trade price {} below best ask {}", trade.price.inner(), ap);
+    #[test]
+    fn prop_trade_prices_in_range(orders in prop::collection::vec(make_order_strategy(), 1..50)) {
+        let mut book = OrderBook::new();
+        for order in orders {
+            let (best, lower, upper) = match order.side {
+                Side::Buy => (book.best_ask_price(), 0, order.price.inner()),
+                Side::Sell => (book.best_bid_price(), order.price.inner(), u64::MAX),
+            };
+            let result = book.submit(order);
+            if let Some(first) = result.trades.first() {
+                prop_assert_eq!(Some(first.price.inner()), best);
+            }
+            for (i, trade) in result.trades.iter().enumerate() {
+                let price = trade.price.inner();
+                prop_assert!((lower..=upper).contains(&price));
+                if i > 0 {
+                    let previous = result.trades[i - 1].price.inner();
+                    match order.side {
+                        Side::Buy => prop_assert!(previous <= price),
+                        Side::Sell => prop_assert!(previous >= price),
                     }
                 }
             }

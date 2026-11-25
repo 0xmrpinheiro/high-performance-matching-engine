@@ -1,0 +1,39 @@
+name: Matching engine checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rust: '1.85.1'
+          - os: windows-latest
+            rust: stable
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Install Rust
+        run: rustup toolchain install ${{ matrix.rust }} --profile minimal
+      - name: Check formatting and lints
+        if: matrix.rust == 'stable'
+        run: |
+          rustup component add rustfmt clippy --toolchain stable
+          cargo +stable fmt --all -- --check
+          cargo +stable clippy --locked --all-targets -- -D warnings
+      - name: Test library and examples
+        run: cargo +${{ matrix.rust }} test --locked --lib --tests --examples
+      - name: Run the partial-fill demo
+        run: cargo +${{ matrix.rust }} run --locked --example partial_fill_demo
+      - name: Compile the benchmark
+        run: cargo +${{ matrix.rust }} bench --locked --bench matching_bench --no-run

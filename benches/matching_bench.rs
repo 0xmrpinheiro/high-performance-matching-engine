@@ -57,11 +57,8 @@ fn setup_bid_book(levels: usize) -> (OrderBook, Order) {
 // ---------------------------------------------------------------------------
 #[divan::bench(args = [1_000, 10_000])]
 fn buy_sweep(b: Bencher, levels: usize) {
-    b.bench_local(|| {
-        let (mut book, taker) = setup_ask_book(levels);
-        let result = book.submit(taker);
-        std::hint::black_box(result);
-    });
+    b.with_inputs(|| setup_ask_book(levels))
+        .bench_local_refs(|(book, taker)| book.submit(*taker));
 }
 
 // ---------------------------------------------------------------------------
@@ -69,9 +66,6 @@ fn buy_sweep(b: Bencher, levels: usize) {
 // ---------------------------------------------------------------------------
 #[divan::bench(args = [1_000, 10_000])]
 fn sell_sweep(b: Bencher, levels: usize) {
-    b.bench_local(|| {
-        let (mut book, taker) = setup_bid_book(levels);
-        let result = book.submit(taker);
-        std::hint::black_box(result);
-    });
+    b.with_inputs(|| setup_bid_book(levels))
+        .bench_local_refs(|(book, taker)| book.submit(*taker));
 }

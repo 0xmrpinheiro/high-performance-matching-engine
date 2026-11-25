@@ -175,12 +175,13 @@ impl<C: Comparator> SkipList<C> {
     }
 
     fn random_level(&mut self) -> usize {
-        let mut level = 0;
-        while level < self.max_level && (self.rng % 2 == 0) {
-            level += 1;
-            self.rng = self.rng.wrapping_mul(1664525).wrapping_add(1013904223);
-        }
-        level
+        // Advance on every insert. Using high bits avoids the simple cycle of
+        // the low bits of a linear congruential generator.
+        self.rng = self
+            .rng
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        (self.rng.leading_zeros() as usize).min(self.max_level)
     }
 }
 
@@ -203,6 +204,24 @@ mod tests {
     use crate::qty::Qty;
     use crate::side::Side;
     use crate::skiplist::comparator::{BuyComparator, SellComparator};
+
+    #[test]
+    fn test_insert_creates_upper_links() {
+        let mut levels = SkipList::<SellComparator>::new(4);
+        for price in 1..=64 {
+            let price = Price::new(price);
+            levels.insert(price, LimitLevel::new(price));
+        }
+
+        assert!(levels.current_level > 0);
+        assert!(levels.current_level <= levels.max_level);
+        for price in (1..=64).rev() {
+            let price = Price::new(price);
+            assert!(levels.find(price).is_some());
+            assert_eq!(levels.remove(price).unwrap().price, price);
+        }
+        assert!(levels.is_empty());
+    }
 
     #[test]
     fn test_insert_and_find_buy() {

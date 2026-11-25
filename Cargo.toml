@@ -2,10 +2,11 @@
 name = "high-performance-matching-engine"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.75"
-description = "In-process order-book matching engine library showcasing systems-engineering skills"
+rust-version = "1.85"
+description = "In-memory Rust limit order book with price-time priority and partial fills"
 license = "MIT"
-repository = "https://github.com/mppin/high-performance-matching-engine"
+repository = "https://github.com/0xmrpinheiro/high-performance-matching-engine"
+keywords = ["order-book", "matching-engine", "limit-orders"]
 
 [dependencies]
 

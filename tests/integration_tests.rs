@@ -66,3 +66,34 @@ fn integration_mixed_flow() {
     assert_eq!(book.bid_levels(), 0);
     assert_eq!(book.ask_levels(), 2);
 }
+
+#[test]
+fn integration_partial_fill_preserves_fifo_on_both_sides() {
+    for (maker_side, taker_side) in [(Side::Sell, Side::Buy), (Side::Buy, Side::Sell)] {
+        let mut book = OrderBook::new();
+        book.submit(make_order(1, maker_side, 100, 100, 1));
+        book.submit(make_order(2, maker_side, 100, 80, 2));
+
+        let first = book.submit(make_order(3, taker_side, 100, 40, 3));
+        assert_eq!(first.trades.len(), 1);
+        assert_eq!(first.trades[0].maker_id, 1);
+        assert_eq!(book.total_book_qty(), 140);
+
+        let second = book.submit(make_order(4, taker_side, 100, 75, 4));
+        let fills: Vec<_> = second
+            .trades
+            .iter()
+            .map(|trade| (trade.maker_id, trade.qty.inner()))
+            .collect();
+        assert_eq!(fills, [(1, 60), (2, 15)], "resting side {maker_side:?}");
+        assert_eq!(book.total_book_qty(), 65);
+
+        let last = book.submit(make_order(5, taker_side, 100, 65, 5));
+        assert_eq!(last.trades.len(), 1);
+        assert_eq!(last.trades[0].maker_id, 2);
+        assert_eq!(last.trades[0].qty.inner(), 65);
+        assert_eq!(book.total_book_qty(), 0);
+        assert_eq!(book.ask_levels(), 0);
+        assert_eq!(book.bid_levels(), 0);
+    }
+}

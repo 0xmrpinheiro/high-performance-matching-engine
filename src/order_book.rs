@@ -49,36 +49,23 @@ impl OrderBook {
                     }
 
                     let limit_level = unsafe { &mut (*best_ask).limit_level };
-                    let mut maker_order = match limit_level.pop_order() {
-                        Some(order) => order,
+                    let (maker_id, trade_qty) = match limit_level.fill_front(remaining_qty) {
+                        Some(fill) => fill,
                         None => {
                             self.asks.remove(ask_price);
                             continue;
                         }
                     };
 
-                    let maker_qty = maker_order.qty.inner();
-                    let taker_qty = remaining_qty;
-
-                    let trade_price = ask_price;
-                    let trade_qty = std::cmp::min(maker_qty, taker_qty);
-                    let timestamp = incoming.timestamp;
-
                     result.trades.push(crate::Trade {
                         trade_id: self.next_trade_id.fetch_add(1, Ordering::Relaxed),
-                        maker_id: maker_order.id,
+                        maker_id,
                         taker_id: incoming.id,
-                        price: trade_price,
-                        qty: Qty::new(trade_qty),
-                        timestamp,
+                        price: ask_price,
+                        qty: trade_qty,
+                        timestamp: incoming.timestamp,
                     });
-
-                    remaining_qty -= trade_qty;
-                    maker_order.qty = Qty::new(maker_qty - trade_qty);
-
-                    if maker_order.qty.inner() > 0 {
-                        limit_level.push_order(maker_order);
-                    }
+                    remaining_qty -= trade_qty.inner();
 
                     if limit_level.is_empty() {
                         self.asks.remove(ask_price);
@@ -115,36 +102,23 @@ impl OrderBook {
                     }
 
                     let limit_level = unsafe { &mut (*best_bid).limit_level };
-                    let mut maker_order = match limit_level.pop_order() {
-                        Some(order) => order,
+                    let (maker_id, trade_qty) = match limit_level.fill_front(remaining_qty) {
+                        Some(fill) => fill,
                         None => {
                             self.bids.remove(bid_price);
                             continue;
                         }
                     };
 
-                    let maker_qty = maker_order.qty.inner();
-                    let taker_qty = remaining_qty;
-
-                    let trade_price = bid_price;
-                    let trade_qty = std::cmp::min(maker_qty, taker_qty);
-                    let timestamp = incoming.timestamp;
-
                     result.trades.push(crate::Trade {
                         trade_id: self.next_trade_id.fetch_add(1, Ordering::Relaxed),
-                        maker_id: maker_order.id,
+                        maker_id,
                         taker_id: incoming.id,
-                        price: trade_price,
-                        qty: Qty::new(trade_qty),
-                        timestamp,
+                        price: bid_price,
+                        qty: trade_qty,
+                        timestamp: incoming.timestamp,
                     });
-
-                    remaining_qty -= trade_qty;
-                    maker_order.qty = Qty::new(maker_qty - trade_qty);
-
-                    if maker_order.qty.inner() > 0 {
-                        limit_level.push_order(maker_order);
-                    }
+                    remaining_qty -= trade_qty.inner();
 
                     if limit_level.is_empty() {
                         self.bids.remove(bid_price);
